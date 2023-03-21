@@ -1,27 +1,13 @@
 #!/usr/bin/env python3
-"""
-this module contains user data management
-"""
+""" Regex-ing, Log formatter, Create logger, Connect to secure database,
+    Read and filter data """
 from typing import List
-import logging
-import mysql.connector
-import os
 import re
-
-
-PII_FIELDS = ('name', 'password', 'phone', 'ssn', 'email')
-
-
-def filter_datum(fields: List[str], redaction: str, message: str,
-                 separator: str) -> str:
-    """
-    this function returns the log message obfuscated - the function uses
-    a regex to replace occurences of certain field values
-    """
-    for field in fields:
-        replace = "{}={}{}".format(field, redaction, separator)
-        message = re.sub("{}=.*?{}".format(field, separator), replace, message)
-    return message
+import logging
+import os
+import mysql.connector
+PII_FIELDS = ('name', 'email', 'phone', 'ssn', 'password')
+""" containing the fields from user_data.csv that are considered PII. """
 
 
 class RedactingFormatter(logging.Formatter):
@@ -33,58 +19,67 @@ class RedactingFormatter(logging.Formatter):
     SEPARATOR = ";"
 
     def __init__(self, fields: List[str]):
-        """initialization method"""
-        super(RedactingFormatter, self).__init__(self.FORMAT)
+        """ constructor """
         self.fields = fields
+        super(RedactingFormatter, self).__init__(self.FORMAT)
 
     def format(self, record: logging.LogRecord) -> str:
-        """this function filters values in incoming log records using
-         filter_datum function"""
+        """ filter values in incoming log records """
         return filter_datum(self.fields, self.REDACTION,
-                            super(RedactingFormatter, self).format(record),
-                            self.SEPARATOR)
+                            super().format(record), self.SEPARATOR)
+
+
+def filter_datum(fields: List[str],
+                 redaction: str,
+                 message: str,
+                 separator: str) -> str:
+    """ returns the log message obfuscated """
+    for item in fields:
+        message = re.sub(fr'{item}=.+?{separator}',
+                         f'{item}={redaction}{separator}', message)
+    return message
 
 
 def get_logger() -> logging.Logger:
-    """this method returns a user data logger"""
-    log = logging.getLogger('user_data')
-    log.setLevel(logging.INFO)
-    log.propagate = False
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(RedactingFormatter(PII_FIELDS))
-    log.addHandler(stream_handler)
-    return log
+    """ returns a logging.Logger object """
+    logger = logging.getLogger("user_data")
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+    handler = logging.StreamHandler()
+    handler.setFormatter(RedactingFormatter(PII_FIELDS))
+    logger.addHandler(handler)
+    return logger
 
 
 def get_db() -> mysql.connector.connection.MySQLConnection:
-    """get_db function that returns a connector to the database"""
-    db_connection = mysql.connector.connect(
-        user=os.getenv('PERSONAL_DATA_DB_USERNAME', 'root'),
-        password=os.getenv('PERSONAL_DATA_DB_PASSWORD', ''),
-        host=os.getenv('PERSONAL_DATA_DB_HOST', 'localhost'),
-        database=os.getenv('PERSONAL_DATA_DB_NAME'))
-    return db_connection
+    """ returns a connector to the database """
+    return mysql.connector.connect(
+                    host=os.environ.get('PERSONAL_DATA_DB_HOST', 'localhost'),
+                    database=os.environ.get('PERSONAL_DATA_DB_NAME', 'root'),
+                    user=os.environ.get('PERSONAL_DATA_DB_USERNAME'),
+                    password=os.environ.get('PERSONAL_DATA_DB_PASSWORD', ''))
 
 
-def main() -> None:
-    """function will obtain a database connection using get_db and retrieve
-    all rows in the users table and display each row under a filtered format
-    """
-    my_db = get_db()
-    cursor = my_db.cursor()
+def main():
+    """ obtain a database connection using get_db and retrieve all rows in the
+        users table and display each row under a filtered format """
+    db = get_db()
+    cursor = db.cursor()
     cursor.execute("SELECT * FROM users;")
-    data = cursor.fetchall()
-
-    log = get_logger()
-
-    for row in data:
-        fields = 'name={}; email={}; phone={}; ssn={}; password={}; ip={}; '\
-            'last_login={}; user_agent={};'
-        fields = fields.format(row[0], row[1], row[2], row[3],
-                               row[4], row[5], row[6], row[7])
-        log.info(fields)
+    result = cursor.fetchall()
+    for row in result:
+        message = f"name={row[0]}; " + \
+                  f"email={row[1]}; " + \
+                  f"phone={row[2]}; " + \
+                  f"ssn={row[3]}; " + \
+                  f"password={row[4]};"
+        print(message)
+        log_record = logging.LogRecord("my_logger", logging.INFO,
+                                       None, None, message, None, None)
+        formatter = RedactingFormatter(PII_FIELDS)
+        formatter.format(log_record)
     cursor.close()
-    my_db.close()
+    db.close()
 
 
 if __name__ == "__main__":
