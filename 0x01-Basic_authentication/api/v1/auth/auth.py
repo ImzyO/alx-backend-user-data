@@ -1,32 +1,34 @@
 #!/usr/bin/env python3
-"""authentication template module
-"""
-
+""" Auth class, Require auth with stars """
 from flask import request
-from typing import List, Pattern, TypeVar
+from typing import List, TypeVar
 
 
-class Auth:
-    """Auth class"""
+class Auth():
+    """ manage the API authentication """
     def require_auth(self, path: str, excluded_paths: List[str]) -> bool:
-        """requires authentication"""
-        if path is None or excluded_paths is None or not excluded_paths:
+        """ require authorithation """
+        if path is None or excluded_paths is None or not len(excluded_paths):
             return True
-        if path in excluded_paths or path + "/" in excluded_paths:
-            return False
-
-        for e_path in excluded_paths:
-            if e_path.endswith('*'):
+        if path[-1] != '/':
+            path += '/'
+        for i in excluded_paths:
+            if i.endswith('*'):
                 if path.startswith(i[:1]):
                     return False
-        return True
+        if path in excluded_paths:
+            return False
+        else:
+            return True
 
     def authorization_header(self, request=None) -> str:
-        """this function add authorization header"""
-        if request is not None:
-            return request.headers.get('Authorization', None)
-        return None
+        """ authorization header """
+        if request is None:
+            return None
+        if not request.headers.get("Authorization"):
+            return None
+        return request.headers.get("Authorization")
 
     def current_user(self, request=None) -> TypeVar('User'):
-        """this method gets the current user"""
-        None
+        """ current user """
+        return None
