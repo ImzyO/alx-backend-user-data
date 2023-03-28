@@ -6,10 +6,10 @@ from sqlalchemy.orm.session import Session
 from sqlalchemy.orm import sessionmaker
 from user import Base, User
 
-from sqlalchemy.exc import InvalidRequestError
-from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.exc import NoResultFound
-from typing import TypeVar
+# from sqlalchemy.exc import InvalidRequestError
+# from sqlalchemy.orm.exc import NoResultFound
+# from sqlalchemy.exc import NoResultFound
+# from typing import TypeVar
 
 
 class DB:
