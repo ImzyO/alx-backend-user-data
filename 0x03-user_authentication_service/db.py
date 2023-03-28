@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """ Create user, Find user, Update user """
 from sqlalchemy import create_engine
-#from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm import sessionmaker
-#from sqlalchemy.orm.exc import NoResultFound
-#from sqlalchemy.exc import NoResultFound
-#from typing import TypeVar
 from user import Base, User
+
+from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.exc import NoResultFound
+from typing import TypeVar
 
 
 class DB:
